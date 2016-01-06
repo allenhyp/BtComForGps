@@ -26,7 +26,7 @@ void loop() {
   for(unsigned long starter = millis(); millis()-starter <1000;) {
     char c = gSerial.read();
     // Serial.write(c);
-    if(myGPS.encode(c));
+    if(myGPS.encode(c))
     {
       newData = true;
     }
