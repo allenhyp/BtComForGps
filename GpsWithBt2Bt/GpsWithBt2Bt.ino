@@ -16,7 +16,7 @@ void setup() {
   while(!Serial){;}
   BtSerial.begin(9600);
   GpsSerial.begin(9600);
-  while (GpsSerial.available()) {
+  while (!GpsSerial.available()) {
     if (GpsSerial.read() == '\r')
       break;
   }
@@ -29,9 +29,12 @@ void loop() {
   unsigned long chars;
   unsigned short sentences, failedCheckedSum;
   for(unsigned long starter = millis(); millis()-starter < 1000;) {
-    char gpsRawData = GpsSerial.read();
-    if(myGps.encode(gpsRawData)) {
-      newData = true;
+    while(GpsSerial.available()) {
+      char gpsRawData = GpsSerial.read();
+      // Serail.write(gpsRawData);
+      if(myGps.encode(gpsRawData)) {
+        newData = true;
+      }
     }
   }
 
@@ -49,19 +52,20 @@ void loop() {
     else {
       myGps.stats(&chars, &sentences, &failedCheckedSum);
       Serial.print("Chars: ");
-      Serial.println(chars);
-      Serial.print("Sentences: ");
-      Serial.println(sentences);
-      Serial.print("Failed_checkedsum: ");
+      Serial.print(chars);
+      Serial.print(", Sentences: ");
+      Serial.print(sentences);
+      Serial.print(", Failed_checkedsum: ");
       Serial.println(failedCheckedSum);
-      Serial.println("----------------------------------------");
       Serial.print("LAT= ");
       Serial.println(fLat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : fLat, 6);
-      Serial.print("LON= ");
+      Serial.print(", LON= ");
       Serial.println(fLon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 :fLon, 6);
+      Serial.println("----------------------------------------");
+
     }
   }
-  else {
+  else if(chars == 0) {
     Serial.println("**No characters received from GPS: check wiring **");
   }
 }

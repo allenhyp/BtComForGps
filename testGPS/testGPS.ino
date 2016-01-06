@@ -6,11 +6,11 @@ SoftwareSerial gSerial(10,11);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(115200);
   gSerial.begin(9600);
   Serial.println("Here begins the track the gps signal.");
   digitalWrite(11,HIGH);
-  while(gSerial.available()) {
+  while(!gSerial.available()) {
     Serial.println("connecting...");
     if(gSerial.read() == '\r')
       break;
@@ -24,11 +24,14 @@ void loop() {
   unsigned long chars;
   unsigned short sentences, failed;
   for(unsigned long starter = millis(); millis()-starter <1000;) {
-    char c = gSerial.read();
-    // Serial.write(c);
-    if(myGPS.encode(c))
-    {
-      newData = true;
+    while(gSerial.available()) {
+      char c = gSerial.read();
+      // Serial.write(c);
+    
+      if(myGPS.encode(c))
+      {
+        newData = true;
+      }
     }
   }
   if(newData) {
