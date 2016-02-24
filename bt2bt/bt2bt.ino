@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 
-SoftwareSerial BtSerial(10,11);
-
+SoftwareSerial BtSerial(5,6);
+String message;
 void setup() { 
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -14,10 +14,17 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  if(BtSerial.available()) {
-    //Serial.print("RESPOND: ");
-    Serial.write(BtSerial.read());
+  while(BtSerial.available()) {
+    message+=char(BtSerial.read());
     //Serial.println();
+    delay(1);
+  }
+  
+  if(!Serial.available() && message!="") {
+    Serial.print("RESPOND: ");
+    Serial.print(message);
+    Serial.println();
+    message="";
   }
   if(Serial.available()) {
     BtSerial.write(Serial.read());
