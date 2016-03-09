@@ -9,12 +9,21 @@
 #define PRECISION_OF_GPS 9
 #define LAT_OFFSET 3
 #define LON_OFFSET 4
-#define DELAY_OFFSET 10
+#define DELAY_OFFSET 2500
+#define MESSAGE_STRING_LENGTH 21
+#define DELAY_GPS 5000
 
+// Functions..
+void BtBroadcasting(float, float, char);
+bool GpsGetData(float &, float &);
+
+// Declarations..
 SoftwareSerial BtSerial(BtSerial_Rx, BtSerial_Tx);
 SoftwareSerial GpsSerial(GpsSerial_Rx, GpsSerial_Tx);
 TinyGPS myGps;
-void BtBroadcasting(float, float, char);
+unsigned long prevMillis = 0;
+unsigned long curMillis = 0;
+const unsigned long gpsInterval = 5000; // milliseconds
 
 void setup() {
   // put your setup code here, to run once:
@@ -30,7 +39,102 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  float fLat, fLon;
+  prevMillis = millis();
+  int count = 0;
+  float aLat = 0.0, aLon = 0.0;
+  unsigned long age;
+  if (GpsGetData(&fLat, &fLon)) 
+  {
+    curMillis = millis();
+    while (curMillis - prevMillis < 5000)
+    {
+      if (GpsGetData(&fLat, &fLon))
+      {
+        myGps.f_get_position(&fLat, &fLon, &age);
+        if (age == TinyGPS::GPS_INVALID_AGE) 
+        {
+          Serial.println("No fix detected.");
+        }
+        else if (age > 5000) 
+        {
+          Serial.println("Warning:possible stale data!");
+        }
+        else 
+        {
+          myGps.stats(&chars, &sentences, &failedCheckedSum);
+          /* Serial.print("Chars: ");
+          Serial.print(chars);
+          Serial.print(", Sentences: ");
+          Serial.print(sentences);
+          Serial.print(", Failed_checkedsum: ");
+          Serial.println(failedCheckedSum); */
+          Serial.print("LAT= ");
+          String sLat = String(fLat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : fLat, PRECISION_OF_GPS);
+          Serial.println(sLat);
+          Serial.print(", LON= ");
+          String sLon = String(fLon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 :fLon, PRECISION_OF_GPS);
+          Serial.println(sLon);
+          Serial.println("----------------------------------------");
+          aLat += fLat;
+          aLon += fLon;
+          count ++;
+        }
+      }
+      else {continue;}
+    }
+    aLat = aLat / count;
+    aLon = aLon / count;
+    BtBroadcasting(fLat, fLon, 'G');
+  }
+  else if(chars == 0) {
+    Serial.println("**No characters received from GPS: check wiring **");
+  }
+}
+
+void BtBroadcasting(float flat, float flon, char bandStatus) {
+  String msgAVDA = "AT+AVDA=";
+  msgAVDA += BAND_NUMBER;
+  msgAVDA += bandStatus;
+  String sLat = String(flat, PRECISION_OF_GPS);
+  sLat = sLat.substring(LAT_OFFSET);
+  String sLon = String(flon, PRECISION_OF_GPS);
+  sLon = sLon.substring(LON_OFFSET);
+  String messageA = msgAVDA + 'A' + sLat;
+  SetAVDA(messageA);
+  delay(DELAY_OFFSET);
+  String messageB = msgAVDA + 'B' + sLon;
+  SetAVDA(messageB);
+  //BtSerial.write(messageB);
+  delay(DELAY_OFFSET);
+}
+
+void SetAVDA(String input) {
+  char message[MESSAGE_STRING_LENGTH];
+  String msgReceived = "";
+  for(int i = 0; i < MESSAGE_STRING_LENGTH; i++) {
+    message[i] = input[i];
+  }
+  message[MESSAGE_STRING_LENGTH-1]='\0';
+  Serial.println(message);
+  BtSerial.write(message);
+  /*while(!BtSerial.available()) {
+    Serial.println("Waiting for bluetooth module to respond...");
+  }
+  while(BtSerial.available()) {
+    msgReceived+=char(BtSerial.read());
+    //Serial.println();
+    delay(1);
+  }
+  
+  if(!Serial.available() && msgReceived!="") {
+    Serial.print("RESPOND: ");
+    Serial.println(msgReceived);
+  }*/
+}
+
+bool GpsGetData(float &flat, float &flon)
+{
   bool newData = false;
   unsigned long chars;
   unsigned short sentences, failedCheckedSum;
@@ -43,56 +147,6 @@ void loop() {
       }
     }
   }
-
-  if(newData) {
-    float fLat, fLon;
-    unsigned long age;
-
-    myGps.f_get_position(&fLat, &fLon, &age);
-    if( age == TinyGPS::GPS_INVALID_AGE) {
-      Serial.println("No fix detected.");
-    }
-    else if (age > 5000) {
-      Serial.println("Warning:possible stale data!");
-    }
-    else {
-      myGps.stats(&chars, &sentences, &failedCheckedSum);
-      /* Serial.print("Chars: ");
-      Serial.print(chars);
-      Serial.print(", Sentences: ");
-      Serial.print(sentences);
-      Serial.print(", Failed_checkedsum: ");
-      Serial.println(failedCheckedSum); */
-      Serial.print("LAT= ");
-      String sLat = String(fLat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : fLat, PRECISION_OF_GPS);
-      Serial.println(sLat);
-      Serial.print(", LON= ");
-      String sLon = String(fLon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 :fLon, PRECISION_OF_GPS);
-      Serial.println(sLon);
-      BtBroadcasting(fLat, fLon, 'G');
-      Serial.println("----------------------------------------");
-    }
-  }
-  else if(chars == 0) {
-    Serial.println("**No characters received from GPS: check wiring **");
-  }
-}
-
-void BtBroadcasting(float lat, float lon, char bandStatus) {
-  String msgAVDA = "AT+AVDA=";
-  msgAVDA += BAND_NUMBER;
-  msgAVDA += bandStatus;
-  String sLat = String(lat, PRECISION_OF_GPS);
-  sLat = sLat.substring(LAT_OFFSET);
-  String sLon = String(lon, PRECISION_OF_GPS);
-  sLon = sLon.substring(LON_OFFSET);
-  String messageA = msgAVDA + 'A' + sLat;
-  Serial.println(messageA);
-  //BtSerial.write(messageA);
-  delay(DELAY_OFFSET);
-  String messageB = msgAVDA + 'B' + sLon;
-  Serial.println(messageB);
-  //BtSerial.write(messageB);
-  delay(DELAY_OFFSET);
+  return newData;
 }
 
