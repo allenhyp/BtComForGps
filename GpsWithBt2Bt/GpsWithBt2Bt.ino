@@ -15,7 +15,8 @@
 
 // Functions..
 void BtBroadcasting(float, float, char);
-bool GpsGetData(float &, float &);
+bool GpsGetData();
+void ShowLocationOnSerial(float, float);
 
 // Declarations..
 SoftwareSerial BtSerial(BtSerial_Rx, BtSerial_Tx);
@@ -41,15 +42,18 @@ void setup() {
 void loop() {
   float fLat, fLon;
   prevMillis = millis();
+  curMillis = prevMillis;
   int count = 0;
-  float aLat = 0.0, aLon = 0.0;
+  float aLat = 0.0;
+  float aLon = 0.0;
   unsigned long age;
-  if (GpsGetData(&fLat, &fLon)) 
+  
+  if (GpsGetData())
   {
-    curMillis = millis();
     while (curMillis - prevMillis < 5000)
     {
-      if (GpsGetData(&fLat, &fLon))
+      curMillis = millis();
+      if (GpsGetData())
       {
         myGps.f_get_position(&fLat, &fLon, &age);
         if (age == TinyGPS::GPS_INVALID_AGE) 
@@ -62,20 +66,6 @@ void loop() {
         }
         else 
         {
-          myGps.stats(&chars, &sentences, &failedCheckedSum);
-          /* Serial.print("Chars: ");
-          Serial.print(chars);
-          Serial.print(", Sentences: ");
-          Serial.print(sentences);
-          Serial.print(", Failed_checkedsum: ");
-          Serial.println(failedCheckedSum); */
-          Serial.print("LAT= ");
-          String sLat = String(fLat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : fLat, PRECISION_OF_GPS);
-          Serial.println(sLat);
-          Serial.print(", LON= ");
-          String sLon = String(fLon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 :fLon, PRECISION_OF_GPS);
-          Serial.println(sLon);
-          Serial.println("----------------------------------------");
           aLat += fLat;
           aLon += fLon;
           count ++;
@@ -87,7 +77,9 @@ void loop() {
     aLon = aLon / count;
     BtBroadcasting(fLat, fLon, 'G');
   }
-  else if(chars == 0) {
+  //else if(chars == 0) {
+  else
+  {
     Serial.println("**No characters received from GPS: check wiring **");
   }
 }
@@ -133,11 +125,9 @@ void SetAVDA(String input) {
   }*/
 }
 
-bool GpsGetData(float &flat, float &flon)
+bool GpsGetData()
 {
   bool newData = false;
-  unsigned long chars;
-  unsigned short sentences, failedCheckedSum;
   for(unsigned long starter = millis(); millis()-starter < 1000;) {
     while(GpsSerial.available()) {
       char gpsRawData = GpsSerial.read();
@@ -148,5 +138,24 @@ bool GpsGetData(float &flat, float &flon)
     }
   }
   return newData;
+}
+
+void ShowLocationOnSerial(float fLat, float fLon)
+{
+  unsigned long chars;
+  unsigned short sentences, failedCheckedSum;myGps.stats(&chars, &sentences, &failedCheckedSum);
+  /* Serial.print("Chars: ");
+  Serial.print(chars);
+  Serial.print(", Sentences: ");
+  Serial.print(sentences);
+  Serial.print(", Failed_checkedsum: ");
+  Serial.println(failedCheckedSum); */
+  Serial.print("LAT= ");
+  String sLat = String(fLat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : fLat, PRECISION_OF_GPS);
+  Serial.println(sLat);
+  Serial.print(", LON= ");
+  String sLon = String(fLon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 :fLon, PRECISION_OF_GPS);
+  Serial.println(sLon);
+  Serial.println("----------------------------------------");
 }
 
