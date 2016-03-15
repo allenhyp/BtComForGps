@@ -6,6 +6,7 @@
 #define BtSerial_Tx 6
 #define GpsSerial_Rx 9
 #define GpsSerial_Tx 10
+#define SwitchInput 8
 #define PRECISION_OF_GPS 9
 #define LAT_OFFSET 3
 #define LON_OFFSET 4
@@ -18,7 +19,7 @@ void BtBroadcasting(float, float, char);
 bool GpsGetData();
 void ShowLocationOnSerial(float, float);
 
-// Declarations..
+// Variables..
 SoftwareSerial BtSerial(BtSerial_Rx, BtSerial_Tx);
 SoftwareSerial GpsSerial(GpsSerial_Rx, GpsSerial_Tx);
 TinyGPS myGps;
@@ -27,7 +28,6 @@ unsigned long curMillis = 0;
 const unsigned long gpsInterval = 5000; // milliseconds
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
   while(!Serial){;}
   BtSerial.begin(9600);
@@ -37,6 +37,7 @@ void setup() {
       break;
   }
   Serial.println("Finnished Setting");
+  pinMode(SwitchInput, INPUT);
 }
 
 void loop() {
@@ -47,8 +48,8 @@ void loop() {
   float aLat = 0.0;
   float aLon = 0.0;
   unsigned long age;
-  
-  if (GpsGetData())
+
+  if (GpsGetData() && digitalRead(SwitchInput) == LOW)
   {
     while (curMillis - prevMillis < 5000)
     {
@@ -78,6 +79,10 @@ void loop() {
     BtBroadcasting(fLat, fLon, 'G');
   }
   //else if(chars == 0) {
+  else if( digitalRead == HIGH)
+  {
+    
+  }
   else
   {
     Serial.println("**No characters received from GPS: check wiring **");
