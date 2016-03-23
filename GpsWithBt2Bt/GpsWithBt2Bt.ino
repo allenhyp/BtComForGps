@@ -53,7 +53,6 @@ void loop() {
   {
     while (curMillis - prevMillis < 5000)
     {
-      curMillis = millis();
       if (GpsGetData())
       {
         myGps.f_get_position(&fLat, &fLon, &age);
@@ -73,15 +72,51 @@ void loop() {
         }
       }
       else {continue;}
+      curMillis = millis();
     }
-    aLat = aLat / count;
-    aLon = aLon / count;
-    BtBroadcasting(fLat, fLon, 'G');
+    if (count > 0)
+    {
+      aLat = aLat / count;
+      aLon = aLon / count;
+      BtBroadcasting(aLat, aLon, 'G');
+      aLat = 0.0;
+      aLon = 0.0;
+      count = 0;
+    }
+    else
+    {
+      aLat = 25.0;
+      aLon = 121.0;
+      BtBroadcasting(aLat, aLon, 'N');
+    }
   }
   //else if(chars == 0) {
-  else if( digitalRead == HIGH)
+
+  // Emergency mode on..
+  else if( digitalRead(SwitchInput) == HIGH)
   {
-    
+    while(true)
+    {
+      while(curMillis - prevMillis < 5000)  // consider not to reduce the cycle time
+      {
+        if(GpsGetData())
+        {
+          myGps.f_get_position(&fLat, &fLon, &age);
+          aLat += fLat;
+          aLon += fLon;
+          count ++;
+        }
+      }
+      if (count > 0)
+      {
+        aLat = aLat / count;
+        aLon = aLon / count;
+        BtBroadcasting(aLat, aLon, 'B');
+      }
+      aLat = 0.0;
+      aLon = 0.0;
+      count = 0;
+    }
   }
   else
   {
