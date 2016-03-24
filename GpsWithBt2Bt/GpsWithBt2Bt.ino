@@ -51,10 +51,12 @@ void loop() {
 
   if (GpsGetData() && digitalRead(SwitchInput) == LOW)
   {
+    Serial.println("hi");
     while (curMillis - prevMillis < 5000)
     {
       if (GpsGetData())
       {
+        
         myGps.f_get_position(&fLat, &fLon, &age);
         if (age == TinyGPS::GPS_INVALID_AGE) 
         {
@@ -66,6 +68,9 @@ void loop() {
         }
         else 
         {
+          Serial.print("valid data: ");
+          Serial.print(fLat, 6);
+          Serial.println(fLon, 6);
           aLat += fLat;
           aLon += fLon;
           count ++;
@@ -90,13 +95,12 @@ void loop() {
       BtBroadcasting(aLat, aLon, 'N');
     }
   }
-  //else if(chars == 0) {
-
-  // Emergency mode on..
-  else if( digitalRead(SwitchInput) == HIGH)
+  else if( digitalRead(SwitchInput) == HIGH && false)
   {
+    Serial.println("SOS!!!");
     while(true)
     {
+      Serial.println("oh no~");
       while(curMillis - prevMillis < 5000)  // consider not to reduce the cycle time
       {
         if(GpsGetData())
@@ -113,9 +117,9 @@ void loop() {
         aLon = aLon / count;
         BtBroadcasting(aLat, aLon, 'B');
       }
-      aLat = 0.0;
-      aLon = 0.0;
-      count = 0;
+      curMillis = millis();
+      if(digitalRead(SwitchInput) == LOW)
+        break;
     }
   }
   else
@@ -177,6 +181,14 @@ bool GpsGetData()
       }
     }
   }
+  /*if(newData)
+  {
+    Serial.println("received data.");
+  }
+  else
+  {
+    Serial.println("received no data.");
+  }*/
   return newData;
 }
 
