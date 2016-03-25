@@ -6,7 +6,7 @@
 #define BtSerial_Tx 6
 #define GpsSerial_Rx 9
 #define GpsSerial_Tx 10
-#define SwitchInput 8
+#define SwitchInput A0
 #define PRECISION_OF_GPS 9
 #define LAT_OFFSET 3
 #define LON_OFFSET 4
@@ -49,9 +49,8 @@ void loop() {
   float aLon = 0.0;
   unsigned long age;
 
-  if (GpsGetData() && digitalRead(SwitchInput) == LOW)
+  if (GpsGetData())
   {
-    Serial.println("hi");
     while (curMillis - prevMillis < 5000)
     {
       if (GpsGetData())
@@ -68,9 +67,6 @@ void loop() {
         }
         else 
         {
-          Serial.print("valid data: ");
-          Serial.print(fLat, 6);
-          Serial.println(fLon, 6);
           aLat += fLat;
           aLon += fLon;
           count ++;
@@ -83,7 +79,21 @@ void loop() {
     {
       aLat = aLat / count;
       aLon = aLon / count;
-      BtBroadcasting(aLat, aLon, 'G');
+      unsigned int readSwitch = analogRead(SwitchInput);
+      Serial.print("SwitchInput= ");
+      Serial.println(readSwitch);
+      if(readSwitch < 800)
+      {
+        Serial.println("Normal..");
+        BtBroadcasting(aLat, aLon, 'G');
+      }
+      else
+      {
+        
+        Serial.println("SOS!");
+        BtBroadcasting(aLat, aLon, 'B');
+      }
+      
       aLat = 0.0;
       aLon = 0.0;
       count = 0;
@@ -93,33 +103,8 @@ void loop() {
       aLat = 25.0;
       aLon = 121.0;
       BtBroadcasting(aLat, aLon, 'N');
-    }
-  }
-  else if( digitalRead(SwitchInput) == HIGH && false)
-  {
-    Serial.println("SOS!!!");
-    while(true)
-    {
-      Serial.println("oh no~");
-      while(curMillis - prevMillis < 5000)  // consider not to reduce the cycle time
-      {
-        if(GpsGetData())
-        {
-          myGps.f_get_position(&fLat, &fLon, &age);
-          aLat += fLat;
-          aLon += fLon;
-          count ++;
-        }
-      }
-      if (count > 0)
-      {
-        aLat = aLat / count;
-        aLon = aLon / count;
-        BtBroadcasting(aLat, aLon, 'B');
-      }
-      curMillis = millis();
-      if(digitalRead(SwitchInput) == LOW)
-        break;
+      aLat = 0.0;
+      aLon = 0.0;
     }
   }
   else
