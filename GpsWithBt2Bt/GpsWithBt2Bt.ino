@@ -105,6 +105,7 @@ void loop() {
       BtBroadcasting(aLat, aLon, 'N');
       aLat = 0.0;
       aLon = 0.0;
+      count = 0;
     }
   }
   else
